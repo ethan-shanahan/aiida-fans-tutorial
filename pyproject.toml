@@ -1,0 +1,37 @@
+[project]
+name = "aiida-fans-tutorial"
+version = "0.1.0"
+description = "Learn how to use aiida-fans in this marimo powered tutorial."
+urls = {Source = "https://github.com/ethan-shanahan/aiida-fans-toturial" }
+authors = [{name = "Ethan Shanahan", email = "ethan.shanahan@gmail.com"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+    "Natural Language :: English",
+    "Programming Language :: Python",
+    "Operating System :: POSIX :: Linux",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Framework :: AiiDA"
+]
+keywords = ["aiida", "plugin", "fans", "marimo", "tutorial"]
+requires-python = ">= 3.11"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.tasks]
+
+[tool.pixi.dependencies]
+"marimo" = "*"
+"aiida-core" = "*"
+"fans" = "*"
+
+[tool.pixi.pypi-dependencies]
+"aiida-fans" = "*"

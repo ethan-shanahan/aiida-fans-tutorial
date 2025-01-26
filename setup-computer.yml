@@ -1,0 +1,13 @@
+label: localhost
+hostname: localhost
+description: ''
+transport: core.local
+scheduler: core.direct
+shebang: '#!/bin/bash'
+work_dir: /home/shanahan/fans-project/.aiida_run
+mpirun_command: mpiexec -n {tot_num_mpiprocs}
+mpiprocs_per_machine: 2
+default_memory_per_machine: null
+use_double_quotes: false
+prepend_text: ' '
+append_text: ' '

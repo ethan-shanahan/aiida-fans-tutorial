@@ -1,0 +1,7 @@
+profile_name: aiida-fans-tutorial
+set_as_default: false
+first_name: Ethan
+last_name: Shanahan
+institution: MIB
+use_rabbitmq: false
+non_interactive: false

@@ -1,0 +1,9 @@
+label: FANS
+description: FANS description
+default_calc_job_plugin: fans
+use_double_quotes: 'False'
+with_mpi: 'True'
+prepend_text: ' '
+append_text: ' '
+computer: localhost
+filepath_executable: /home/shanahan/FANS/build/FANS

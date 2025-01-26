@@ -1,0 +1,7 @@
+profile_name: aiida-fans-tutorial
+set_as_default: false
+first_name: John
+last_name: Doe
+institution: MIB
+use_rabbitmq: false
+interactive: false
