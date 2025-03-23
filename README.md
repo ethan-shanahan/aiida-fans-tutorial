@@ -3,10 +3,10 @@ Learn how to use aiida-fans in this marimo powered tutorial.
 
 ## Usage
 
-Assuming you have FANS, python, venv, and pip installed on a linux system, the recommended way to use this tutorial is by creating a virtual environment in this directory with the following command:
+Assuming you have FANS, python 3.13, venv, and pip installed on a linux system, the recommended way to use this tutorial is by creating a virtual environment in this directory with the following command:
 
 ```
-python3 -m venv .venv
+python -m venv .venv
 ```
 Then activate this environment like so:
 
@@ -19,7 +19,7 @@ You can ensure the the environment was succesfully activated with `which python`
 You may need to install/upgrade pip now with your virtual environment activated. Run the following command:
 
 ```
-python3 -m pip install --upgrade pip
+python -m pip install --upgrade pip
 ```
 
 Once pip is up to date, run the following command to install the tutorial's dependencies:
