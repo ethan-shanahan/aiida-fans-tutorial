@@ -36,6 +36,12 @@ marimo run tutorial.py
 
 ## Alternative Usage
 
+### 1. Conda
+
+This method is a work-in-progress!
+
+### 2. Pixi
+
 This method is a work-in-progress!
 
 You can use pixi to install everything you need as defined by the pyproject.toml file. It should bundle python, FANS, AiiDA, aiida-fans, and marimo all into a virtual environment located in a .pixi directory. You can proceed to directly begin the tutorial with:
