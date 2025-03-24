@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.10.17"
+__generated_with = "0.11.26"
 app = marimo.App(app_title="Plugin Tutorial")
 
 
@@ -486,19 +486,24 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
+    load_profile_button = mo.ui.run_button()
+
     mo.md(
-        r"""
+        rf"""
         ### Creating Input Parameters
 
         We will create all the input parameters we wish to study today at once. To begin, we import everything that will be needed and call the `load_profile()` command to activate the default profile within this script.
+
+        Press this button only after you have created a default profile as described above.
+
+        {load_profile_button}
         """
     )
-    return
+    return (load_profile_button,)
 
 
 @app.cell
 def imports():
-    from aiida import load_profile
     from aiida.engine import run
     from aiida.plugins import CalculationFactory
     from aiida.orm import (
@@ -518,8 +523,6 @@ def imports():
     from numpy import array
     from itertools import product
     from random import uniform
-
-    load_profile()
     return (
         ArrayData,
         CalcJobNode,
@@ -535,27 +538,40 @@ def imports():
         array,
         load_code,
         load_node,
-        load_profile,
         product,
         run,
         uniform,
     )
 
 
+@app.cell
+def _(load_profile_button, mo):
+    mo.stop(not load_profile_button.value)  # run on click
+    from aiida import load_profile
+    load_profile()
+    return (load_profile,)
+
+
 @app.cell(hide_code=True)
 def _(mo):
+    mk_group_button = mo.ui.run_button()
+
     mo.md(
-        r"""
+        rf"""
         Next, we will create a "group". This is purely an organisational tool that AiiDA provides. It may come in handy later to see what nodes belong to the inputs we are creating today.
 
         We use the `QueryBuilder` to find all groups with label "inputs". If none exist, we create one and provide it a short description.
+
+        {mk_group_button}
         """
     )
-    return
+    return (mk_group_button,)
 
 
 @app.cell
-def group(Group, QueryBuilder):
+def group(Group, QueryBuilder, mk_group_button, mo):
+    mo.stop(not mk_group_button.value)  # run on click
+
     groups = QueryBuilder(
     ).append(
         Group, filters={
@@ -630,17 +646,21 @@ def microstructure(
 
 @app.cell(hide_code=True)
 def _(mo):
+    def_nodes_button = mo.ui.run_button()
+
     mo.md(
-        r"""
+        rf"""
         Now, we will define the rest of our parameters. This is mostly straightforward, but we treat `material_properties` and `macroscale_loading` a little differently.
 
         - `material_properties`: A mock parameter space study is realised by randomly picking bulk and shear moduli from within a range.
         - `macroscale_loading`: Three distinct loading conditions are explicitly written out.
 
         When it comes time to run our calculations, we will run the "product" of all these parameters.
+
+        {def_nodes_button}
         """
     )
-    return
+    return (def_nodes_button,)
 
 
 @app.cell
@@ -652,9 +672,13 @@ def node_definition(
     List,
     Str,
     array,
+    def_nodes_button,
+    mo,
     product,
     uniform,
 ):
+    mo.stop(not def_nodes_button.value)  # run on click
+
     nodes = [
 
     # Microstructure Definition
@@ -961,18 +985,24 @@ def calculations(
 
 @app.cell
 def _(mo):
+    query_button = mo.ui.run_button()
+
     mo.md(
-        r"""
+        rf"""
         ## Analysing the Results
 
         Now that our calculations are complete, we can make use of the QueryBuilder again to find and analyse the results.
+
+        {query_button}
         """
     )
-    return
+    return (query_button,)
 
 
 @app.cell
-def _(CalcJobNode, Int, QueryBuilder):
+def _(CalcJobNode, Int, QueryBuilder, mo, query_button):
+    mo.stop(not query_button.value)  # run on click
+
     calcs = QueryBuilder().append(CalcJobNode).all(flat=True)
 
     calc = calcs[0]
