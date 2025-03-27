@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.11.26"
-app = marimo.App(app_title="Plugin Tutorial")
+app = marimo.App(app_title="AiiDA-FANS Tutorial")
 
 
 @app.cell(hide_code=True)
@@ -13,40 +13,58 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    _tip = mo.accordion({
-        "Dependencies...": mo.md("""
-    The rest of this tutorial assumes you have read the attached README and have installed the required packages described therein. Although not foolproof, you can run the following command to check if at least AiiDA and the plugin are installed correctly.
+    nav_menu = mo.nav_menu(
+        {
+            "#aiida-setup": "AiiDA Setup",
+            "#fans-rundown": "FANS Rundown",
+            "#submitting-jobs": "Submitting Jobs",
+            "#analysing-the-results": "Analysing the Results",
+            "Links": {
+                "https://github.com/ethan-shanahan/aiida-fans": "aiida-fans",
+                "https://github.com/DataAnalyticsEngineering/FANS": "FANS",
+                "https://www.aiida.net/": "AiiDA",
+            },
+        }
+    )
+
+    _tip = mo.md("""
+    **Requirements:**
+
+    The rest of this tutorial assumes you have read the attached README and have installed the requirements described therein. Although not foolproof, you can run the following commands to check if AiiDA, the plugin, and FANS are installed correctly.
 
     ```
     verdi plugin list aiida.calculations fans
+    FANS
     ```
+
+    Notice that we assume FANS is located on your PATH (or at least it is in your active  environment). While this is not necessary in general practice, the tutorial will continue under this assumption.
+    """).callout("warn")
+
+    mo.md(rf"""{nav_menu}
+
+    ---
+
+    # AiiDA-FANS Tutorial
+
+    The goal of this tutorial is to give you an idea of how to utilise the `aiida-fans` plugin as well as an introduction to `AiiDA` and `FANS`. By the end of this tutorial, you should know how to:
+
+    - Setup your AiiDA profile, computer, and code.
+    - Define FANS options and prepare a parameter space study. 
+    - Write a `submit.py` script to run your jobs.
+    - Query and read the results.
+
+    {_tip}
     """)
-    })
-    mo.md(
-        rf"""
-        # Plugin Tutorial
-
-        The goal of this tutorial is to give you an idea of how to utilise the `aiida-fans` plugin as well as an introduction to `AiiDA` and `FANS`.
-        By the end of this tutorial, you should know how to:
-
-        - Setup your AiiDA profile, computer, and code.
-        - Define FANS options and prepare a parameter space study. 
-        - Write a `submit.py` script to run your jobs.
-        - Query and read the results.
-
-        {_tip}
-        """
-    )
-    return
+    return (nav_menu,)
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    _note = mo.md(
-        """
-        **Note:** This section assumes you have not already set up an appropriate profile, computer, and code for using AiiDA and FANS. If you have already done this, you may skip to the next section.
-        """
-    ).callout("info")
+    _note = mo.md(r"""
+    **Note:** _not your first profile..._
+
+    This section assumes you have not already set up an appropriate profile, computer, and code for using AiiDA and FANS. If you have already done this, you may wish to skip to the next section.
+    """).callout("info")
     mo.md(
         rf"""
         ## AiiDA Setup
@@ -79,72 +97,85 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    config_profile = (
-        mo.md("""
-        **Fill in the details below to generate your custom profile configuration.**
+    profile_settings = mo.hstack(
+        [
+            mo.vstack([
+                "Profile Name:",
+                "First Name:",
+                "Last Name:",
+                "Email:",
+                "Institution:",
+            ], align="start", heights="equal", gap=0.8),
+            mo.vstack([
+                "{profile_name}",
+                "{first_name}",
+                "{last_name}",
+                "{email}",
+                "{institution}",
+            ], align="start", heights="equal", gap=0.5)
+        ],
+        justify="center", align="stretch", gap=2.0,
+    ).batch(
+        profile_name=mo.ui.text("aiida-fans-tutorial"),
+        first_name=mo.ui.text("Max"),
+        last_name=mo.ui.text("Mustermann"),
+        email=mo.ui.text("example@nomail.com"),
+        institution=mo.ui.text("MIB"),
+    ).form(
+        show_clear_button=True, clear_button_label="Reset", bordered=True
+    )
 
-        - {profile_name}
-        - {first_name}
-        - {last_name}
-        - {email}
-        - {institution}
-        """)
-        .batch(
-            profile_name=mo.ui.text("aiida-fans-tutorial", label="Profile Name:"),
-            first_name=mo.ui.text("Max", label="First Name:"),
-            last_name=mo.ui.text("Mustermann", label="Last Name:"),
-            email=mo.ui.text("example@nomail.com", label="Email:"),
-            institution=mo.ui.text("MIB", label="Institution:"),
-        )
-        .form(show_clear_button=True, clear_button_label="Reset", bordered=False)
-    ); config_profile
-    return (config_profile,)
+    mo.vstack([
+        mo.md("**Fill in the details below to generate your custom profile configuration.**"),
+        profile_settings
+    ], align="center")
+    return (profile_settings,)
 
 
 @app.cell(hide_code=True)
-def _(config_profile, mo):
-    mo.stop(config_profile.value is None, mo.md("*Awaiting input above...*"))
+def _(mo, profile_settings):
+    mo.stop(
+        profile_settings.value is None,
+        mo.status.spinner(title="Awaiting input above ...", remove_on_exit=False)
+    )
 
-    setup_profile = rf"""profile: {config_profile.value["profile_name"]}
-    first_name: {config_profile.value["first_name"]}
-    last_name: {config_profile.value["last_name"]}
-    email: {config_profile.value["email"]}
-    institution: {config_profile.value["institution"]}
+    profile_config = \
+    rf"""profile: {profile_settings.value["profile_name"]}
+    first_name: {profile_settings.value["first_name"]}
+    last_name: {profile_settings.value["last_name"]}
+    email: {profile_settings.value["email"]}
+    institution: {profile_settings.value["institution"]}
     use_rabbitmq: false
     set_as_default: true
     non_interactive: true
     """
 
-    with open("setup_profile.yaml", "w") as _f:
-        _f.write(setup_profile)
+    with open("configure_profile.yaml", "w") as _f:
+        _f.write(profile_config)
 
-    mo.md(rf"""
-    Below is your profile configuration. It has been automatically written to the file `setup_profile.yaml`.
+    mo.md(f"""
+    With the values you input above, a `configure_profile.yaml` has been automatically written to the working directory. It contains the following data:
 
     ```yaml
-    {setup_profile}
+    {profile_config}
     ```
-    """
-    )
-    return (setup_profile,)
+    """).callout(kind="success")
+    return (profile_config,)
 
 
 @app.cell(hide_code=True)
-def _(config_profile, mo):
-    mo.stop(config_profile.value is None, None)
+def _(mo, profile_settings):
+    _note = mo.md(rf"""
+    **Note:** _on default profiles..._
 
-    _tip = mo.accordion({
-            "On default profiles...": mo.md(rf"""
-    We have made the new profile our default profile. This means that any further calls to `verdi` will implicitly use the {config_profile.value["profile_name"]} profile. You can change the profile on a per-call basis with the `-p/--profile` option. To change the default profile use:
+    We have made the new profile our default profile. This means that any further calls to `verdi` will implicitly use the {"<profile_name>" if profile_settings.value is None else profile_settings.value["profile_name"]} profile. You can change the profile on a per-call basis with the `-p/--profile` option. To change the default profile use:
 
     ```
-    verdi profile set-default PROFILE
+    verdi profile set-default <profile_name>
     ```
-    """
-    )
-    })
+    """).callout(kind="info")
 
-    mo.md(rf"""
+    mo.md(f"""
     To create your new profile from this file run:
 
     ```
@@ -155,12 +186,11 @@ def _(config_profile, mo):
 
     ```
     verdi profile list
-    verdi profile show {config_profile.value["profile_name"]}
+    verdi profile show {"<profile_name>" if profile_settings.value is None else profile_settings.value["profile_name"]}
     ```
 
-    {_tip}
-    """
-    )
+    {_note}
+    """)
     return
 
 
@@ -183,37 +213,52 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    config_computer = (
-        mo.md("""
-        **Fill in the details below to generate your custom computer configuration.**
+    computer_settings = mo.hstack(
+        [
+            mo.vstack([
+                "Computer Label:",
+                "MPI processes:",
+                "Description:",
+            ], align="start", heights="equal", gap=0.8),
+            mo.vstack([
+                "{label}",
+                "{mpiprocs}",
+                "{description}",
+            ], align="start", heights="equal", gap=0.5)
+        ],
+        justify="center", align="stretch", gap=2.0,
+    ).batch(
+            label=mo.ui.text("localhost"),
+            mpiprocs=mo.ui.text("2"),
+            description=mo.ui.text_area("This is my local machine."),
+    ).form(
+        show_clear_button=True, clear_button_label="Reset", bordered=True
+    )
 
-        - {label}
-        - {mpiprocs}
-        - {description}
-        """)
-        .batch(
-            label=mo.ui.text("localhost", label="Computer Label:"),
-            mpiprocs=mo.ui.text("2", label="MPI processes:"),
-            description=mo.ui.text("This is my local machine.", label="Description:", full_width=True),
-        )
-        .form(show_clear_button=True, clear_button_label="Reset", bordered=False)
-    ); config_computer
-    return (config_computer,)
+    mo.vstack([
+        mo.md("**Fill in the details below to generate your custom computer configuration.**"),
+        computer_settings
+    ], align="center")
+    return (computer_settings,)
 
 
 @app.cell(hide_code=True)
-def _(Path, config_computer, mo):
-    mo.stop(config_computer.value is None, mo.md("*Awaiting input above...*"))
+def _(Path, computer_settings, mo):
+    mo.stop(
+        computer_settings.value is None,
+        mo.status.spinner(title="Awaiting input above ...", remove_on_exit=False)
+    )
 
-    setup_computer = rf"""label: {config_computer.value["label"]}
-    description: {config_computer.value["description"]}
+    computer_config = \
+    rf"""label: {computer_settings.value["label"]}
+    description: {computer_settings.value["description"]}
     hostname: localhost
     transport: core.local
     scheduler: core.direct
     shebang: #!/bin/bash
     work_dir: {Path.cwd()}/.aiida_run""" + r"""
     mpirun_command: mpiexec -n {tot_num_mpiprocs}""" + rf"""
-    mpiprocs_per_machine: {config_computer.value["mpiprocs"]}
+    mpiprocs_per_machine: {computer_settings.value["mpiprocs"]}
     default_memory_per_machine: null
     use_double_quotes: false
     prepend_text: ' '
@@ -221,24 +266,21 @@ def _(Path, config_computer, mo):
     non_interactive: true
     """
 
-    with open("setup_computer.yaml", "w") as _f:
-        _f.write(setup_computer)
+    with open("configure_computer.yaml", "w") as _f:
+        _f.write(computer_config)
 
-    mo.md(rf"""
-    Below is your computer configuration. It has been automatically written to the file `setup_computer.yaml`.
+    mo.md(f"""
+    With the values you input above, a `configure_computer.yaml` has been automatically written to the working directory. It contains the following data:
 
     ```yaml
-    {setup_computer}
+    {computer_config}
     ```
-    """
-    )
-    return (setup_computer,)
+    """).callout(kind="success")
+    return (computer_config,)
 
 
 @app.cell(hide_code=True)
-def _(config_computer, mo):
-    mo.stop(config_computer.value is None, None)
-
+def _(computer_settings, mo):
     mo.md(rf"""
     To specify your new computer from this file run:
 
@@ -257,7 +299,7 @@ def _(config_computer, mo):
     Hopefully, that completed successfully. Using this command, you should test that AiiDA can connect to the machine:
 
     ```
-    verdi computer test {config_computer.value["label"]}
+    verdi computer test {"<computer_label>" if computer_settings.value is None else computer_settings.value["label"]}
     ```
     """
     )
@@ -278,62 +320,76 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    config_code = (
-        mo.md("""
-        **Fill in the details below to generate your custom code configuration.**
+    code_settings = mo.hstack(
+        [
+            mo.vstack([
+                mo.vstack([
+                    "Code Label:",
+                    "Description:",
+                ], align="start", heights="equal", gap=0.8),
+                    "Environment Activation Script:",
+            ], align="start", heights="equal", gap=5.55),    
+            mo.vstack([
+                "{label}",
+                "{description}",
+                "{environment}",
+            ], align="start", heights="equal", gap=0.5)
+        ],
+        justify="center", align="stretch", gap=2.0,
+    ).batch(
+        label=mo.ui.text("localhost"),
+        description=mo.ui.text_area("The FANS executable."),
+        environment=mo.ui.text_area("eval \"$(conda shell.bash hook)\"\nconda activate aiida-fans-tutorial"),
+    ).form(
+        show_clear_button=True, clear_button_label="Reset", bordered=True
+    )
 
-        - {label}
-        - {description}
-        - {environment}
-        """)
-        .batch(
-            label=mo.ui.text("FANS", label="Code Label:"),
-            description=mo.ui.text("The FANS executable.", label="Description:"),
-            environment=mo.ui.text_area("""eval "$(conda shell.bash hook)"
-    conda activate aiida-fans-tutorial""", label="Environment Activation Script:", full_width=True)
-        )
-        .form(show_clear_button=True, clear_button_label="Reset", bordered=False)
-    ); config_code
-    return (config_code,)
+    mo.vstack([
+        mo.md("**Fill in the details below to generate your custom code configuration.**"),
+        code_settings
+    ], align="center")
+    return (code_settings,)
 
 
 @app.cell(hide_code=True)
-def _(config_code, config_computer, mo):
-    mo.stop(config_code.value is None, mo.md("*Awaiting input above...*"))
+def _(code_settings, computer_settings, mo):
+    mo.stop(
+        code_settings.value is None or computer_settings.value is None,
+        mo.status.spinner(title="Awaiting input above ...", remove_on_exit=False)
+    )
 
-    setup_code = rf"""label: {config_code.value["label"]}
-    description: {config_code.value["description"]}
+    code_config = \
+    rf"""label: {code_settings.value["label"]}
+    description: {code_settings.value["description"]}
     default_calc_job_plugin: fans
     use_double_quotes: false
     with_mpi: true
-    computer: {config_computer.value["label"]}
+    computer: {computer_settings.value["label"]}
     filepath_executable: FANS
     prepend_text: |
-    {"\n".join([f"    {ln}" for ln in config_code.value["environment"].split("\n")])}
+    {"\n".join([f"    {ln}" for ln in code_settings.value["environment"].split("\n")])}
     append_text: ' '
     non_interactive: true
     """
 
-    with open("setup_code.yaml", "w") as _f:
-        _f.write(setup_code)
+    with open("configure_code.yaml", "w") as _f:
+        _f.write(code_config)
 
-    mo.md(rf"""
-    Below is your code configuration. It has been automatically written to the file `setup_code.yaml`.
+    mo.md(f"""
+    With the values you input above, a `configure_code.yaml` has been automatically written to the working directory. It contains the following data:
 
     ```yaml
-    {setup_code}
+    {code_config}
     ```
-    """
-    )
-    return (setup_code,)
+    """).callout(kind="success")
+    return (code_config,)
 
 
 @app.cell(hide_code=True)
-def _(config_code, mo):
-    mo.stop(config_code.value is None, None)
+def _(computer_settings, mo):
+    _note = mo.md(rf"""
+    **Note:** _your first node..._
 
-    _tip = mo.accordion({
-            "Your first node...": mo.md(rf"""
     You should also note that the code is saved by AiiDA as a node, and thus we have created our first node. Any calculation jobs we perform will be connected to this code node in the provenance graph.
 
     To list all the nodes stored in your profile, run:
@@ -341,9 +397,7 @@ def _(config_code, mo):
     ```
     verdi node list
     ```
-    """
-    )
-    })
+    """).callout(kind="info")
 
     mo.md(rf"""
     To define your new code from this file run:
@@ -355,11 +409,11 @@ def _(config_code, mo):
     Hopefully, that completed successfully. Using these commands, you can show the details of your new code and verify that AiiDA can connect to it:
 
     ```
-    verdi code show {config_code.value["label"]}
-    verdi code test {config_code.value["label"]}
+    verdi code show {"<code_label>" if computer_settings.value is None else computer_settings.value["label"]}
+    verdi code test {"<code_label>" if computer_settings.value is None else computer_settings.value["label"]}
     ```
 
-    {_tip}
+    {_note}
     """
     )
     return
