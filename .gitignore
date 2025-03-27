@@ -33,9 +33,9 @@ pixi.lock
 *.egg-info
 
 # Tutorial generated files
-setup_profile.yaml
-setup_computer.yaml
-setup_code.yaml
+configure_profile.yaml
+configure_computer.yaml
+configure_code.yaml
 
 # Aiida
 .aiida_run
