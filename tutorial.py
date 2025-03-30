@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.11.26"
+__generated_with = "0.11.31"
 app = marimo.App(app_title="AiiDA-FANS Tutorial")
 
 
@@ -64,22 +64,23 @@ def _(mo):
     **Note:** _not your first profile..._
 
     This section assumes you have not already set up an appropriate profile, computer, and code for using AiiDA and FANS. If you have already done this, you may wish to skip to the next section.
+
+    However, this tutorial is designed to work with a blank profile specifically.
     """).callout("info")
-    mo.md(
-        rf"""
-        ## AiiDA Setup
 
-        Before we can truly begin, we must set up AiiDA on your machine. This means three things.
+    mo.md(rf"""
+    ## AiiDA Setup
 
-        1. Create a Profile
-        2. Specify a Computer
-        3. Define a Code
+    Before we can truly begin, we must set up AiiDA on your machine. This means three things.
 
-        AiiDA has multiple user interfaces but their CLI, `verdi`, is particularly well suited to these three steps since they need to be performed only rarely. Therefore, you will need access to the terminal to proceed.
+    1. Create a Profile
+    2. Specify a Computer
+    3. Define a Code
 
-        {_note}
-        """
-    )
+    AiiDA has multiple user interfaces but their CLI, `verdi`, is particularly well suited to these three steps since they need to be performed only rarely. Therefore, you will need access to the terminal to proceed.
+
+    {_note}
+    """)
     return
 
 
@@ -202,8 +203,8 @@ def _(mo):
 
         Before you proceed, ensure that your local computer satisfies the following requirements:
 
-        - It runs a Unix-like operating system (Linux distros and MacOS should work fine)
-        - It has `bash` installed
+        - it runs a Unix-like operating system (Linux distros and MacOS should work fine)
+        - it has `bash` installed
 
         AiiDA does not assume what computer you wish to run jobs on, so even if you are only using your local machine, you must tell it as much. That is what we will do here; specify the localhost computer.
         """
@@ -337,7 +338,7 @@ def _(mo):
         ],
         justify="center", align="stretch", gap=2.0,
     ).batch(
-        label=mo.ui.text("localhost"),
+        label=mo.ui.text("FANS"),
         description=mo.ui.text_area("The FANS executable."),
         environment=mo.ui.text_area("eval \"$(conda shell.bash hook)\"\nconda activate aiida-fans-tutorial"),
     ).form(
@@ -386,7 +387,7 @@ def _(code_settings, computer_settings, mo):
 
 
 @app.cell(hide_code=True)
-def _(computer_settings, mo):
+def _(code_settings, mo):
     _note = mo.md(rf"""
     **Note:** _your first node..._
 
@@ -409,8 +410,8 @@ def _(computer_settings, mo):
     Hopefully, that completed successfully. Using these commands, you can show the details of your new code and verify that AiiDA can connect to it:
 
     ```
-    verdi code show {"<code_label>" if computer_settings.value is None else computer_settings.value["label"]}
-    verdi code test {"<code_label>" if computer_settings.value is None else computer_settings.value["label"]}
+    verdi code show {"<code_label>" if code_settings.value is None else code_settings.value["label"]}
+    verdi code test {"<code_label>" if code_settings.value is None else code_settings.value["label"]}
     ```
 
     {_note}
@@ -540,43 +541,74 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    load_profile_button = mo.ui.run_button()
+    load_profile_button = mo.ui.run_button(label="`RUN`")
 
-    mo.md(
-        rf"""
-        ### Creating Input Parameters
+    mo.md(rf"""
+    ### Creating Input Parameters
 
-        We will create all the input parameters we wish to study today at once. To begin, we import everything that will be needed and call the `load_profile()` command to activate the default profile within this script.
+    We will create all the input parameters we wish to study today at once. To begin, we import everything that will be needed and call the `load_profile()` function to activate the default profile within this script.
 
-        Press this button only after you have created a default profile as described above.
+    Press this button only after you have created a default profile as described above in [AiiDA Setup](#aiida-setup).
 
-        {load_profile_button}
-        """
+    {load_profile_button}
+
+    ```py
+    from aiida.engine import run                  # run jobs
+    from aiida.plugins import CalculationFactory  # generates fans calculation
+    from aiida.orm import (
+        Group,                                    # node organisation tool
+        SinglefileData,                           # \
+        Str,                                      # |
+        Float,                                    # |
+        Int,                                      # |- AiiDA datatypes
+        List,                                     # |
+        Dict,                                     # |
+        ArrayData,                                # /
+        CalcJobNode,                              # node type for calculation jobs
+        QueryBuilder,                             # advanced query tool
+        load_node,                                # basic query tool for nodes
+        load_code,                                # basic query tool for codes
     )
+    from numpy import array                       # numpy array
+    from itertools import product                 # for parameter space generation
+    from random import uniform                    # for parameter space generation
+
+    from aiida import load_profile                # injects profile context into script
+    load_profile()
+    ```
+    """)
     return (load_profile_button,)
 
 
-@app.cell
-def imports():
-    from aiida.engine import run
-    from aiida.plugins import CalculationFactory
+@app.cell(hide_code=True)
+def imports(load_profile_button, mo):
+    mo.stop(not load_profile_button.value)  # run on click
+
+    from aiida.engine import run                  # run jobs
+    from aiida.plugins import CalculationFactory  # generates fans calculation
     from aiida.orm import (
-        Group,
-        QueryBuilder,
-        SinglefileData,
-        Str,
-        Float,
-        Int,
-        List,
-        Dict,
-        ArrayData,
-        CalcJobNode,
-        load_node,
-        load_code,
+        Group,                                    # node organisation tool
+        SinglefileData,                           # \
+        Str,                                      # |
+        Float,                                    # |
+        Int,                                      # |- AiiDA datatypes
+        List,                                     # |
+        Dict,                                     # |
+        ArrayData,                                # /
+        CalcJobNode,                              # node type for calculation jobs
+        QueryBuilder,                             # advanced query tool
+        load_node,                                # basic query tool for nodes
+        load_code,                                # basic query tool for codes
     )
-    from numpy import array
-    from itertools import product
-    from random import uniform
+    from numpy import array                       # numpy array
+    from itertools import product                 # for parameter space generation
+    from random import uniform                    # for parameter space generation
+
+    from aiida import load_profile                # injects profile context into script
+    try: 
+        load_profile()
+    except:
+        mo.stop(True, output=mo.md("**Your profile failed to load properly!**").style(text_align="center").callout(kind="danger"))
     return (
         ArrayData,
         CalcJobNode,
@@ -592,56 +624,71 @@ def imports():
         array,
         load_code,
         load_node,
+        load_profile,
         product,
         run,
         uniform,
     )
 
 
-@app.cell
-def _(load_profile_button, mo):
-    mo.stop(not load_profile_button.value)  # run on click
-    from aiida import load_profile
-    load_profile()
-    return (load_profile,)
-
-
 @app.cell(hide_code=True)
 def _(mo):
-    mk_group_button = mo.ui.run_button()
+    # mk_group_button = mo.ui.run_button(label="`RUN`")
 
-    mo.md(
-        rf"""
-        Next, we will create a "group". This is purely an organisational tool that AiiDA provides. It may come in handy later to see what nodes belong to the inputs we are creating today.
-
-        We use the `QueryBuilder` to find all groups with label "inputs". If none exist, we create one and provide it a short description.
-
-        {mk_group_button}
-        """
-    )
-    return (mk_group_button,)
-
-
-@app.cell
-def group(Group, QueryBuilder, mk_group_button, mo):
-    mo.stop(not mk_group_button.value)  # run on click
-
-    groups = QueryBuilder(
-    ).append(
+    _code = r"""
+    groups = QueryBuilder(                # we will use the advanced query method
+    ).append(                             # it consists of a series of `.append` methods
         Group, filters={
-            Group.fields.label: "inputs"
+            Group.fields.label: "inputs"  # here we filter by groups labeled "inputs"
         }
-    ).all(
+    ).all(                                # conclude with a method to fetch the results
         flat=True
     )
 
-    if len(groups) == 0:
-        inputs = Group(
+    if len(groups) == 0:                  # if the "inputs" group does not exist...
+        inputs = Group(                   # make it
             label="inputs",
             description="Herein are all the manually defined inputs for FANS."
-        ).store()
-    elif len(groups) == 1:
+        ).store()                           # the `.store` method saves it in the database
+
+    elif len(groups) == 1:                # otherwise don't make it
         inputs = groups.pop()
+    """
+
+    mo.md(rf"""
+    Next, we will create a "group". This is purely an organisational tool that AiiDA provides. It may come in handy later to see what nodes belong to the inputs we are creating today.
+
+    We use the `QueryBuilder` to find all groups with label "inputs". If none exist, we create one and provide it a short description.
+
+    ```py
+    {_code}
+    ```
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def group(Group, QueryBuilder, load_profile_button, mo):
+    mo.stop(not load_profile_button.value)  # run on click
+
+    groups = QueryBuilder(                # we will use the advanced query method
+    ).append(                             # it consists of a series of `.append` methods
+        Group, filters={
+            Group.fields.label: "inputs"  # here we filter by groups labeled "inputs"
+        }
+    ).all(                                # conclude with a method to fetch the results
+        flat=True
+    )
+
+    if len(groups) == 0:                  # if the "inputs" group does not exist...
+        inputs = Group(                   # make it
+            label="inputs",
+            description="Herein are all the manually defined inputs for FANS."
+        ).store()                           # the `.store` method saves it in the database
+
+    elif len(groups) == 1:                # otherwise don't make it
+        inputs = groups.pop()
+
     else:
         raise
     return groups, inputs
@@ -649,23 +696,60 @@ def group(Group, QueryBuilder, mk_group_button, mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mk_microstructure_button = mo.ui.run_button(); mk_microstructure_button
+    mk_microstructure_button = mo.ui.run_button(label="`RUN`")
 
-    abs_path = mo.ui.text(placeholder="/path/to/microstructure.h5", label="Absolute Path to Microsturcture:", full_width=True)
-
-    mo.md(rf"""
-    Next, we store the microstructure file in the database. Using a similar strategy as with the group definition, the `QueryBuilder` first searches for an existing microstructure. If none are found, we define a new one in the form of a `SinglefileData`. This built-in AiiDA datatype points to a file via a path. Finally, the microstructure node is included with our "inputs" group.
-
-    {abs_path}
-
-    As an added precaution, you must click this button to run the following cell. A few more buttons like this appear throughout this tutorial.
-
-    {mk_microstructure_button}
-    """)
+    abs_path = mo.ui.text(placeholder="/path/to/microstructure.h5", full_width=True)
     return abs_path, mk_microstructure_button
 
 
-@app.cell
+@app.cell(hide_code=True)
+def _(abs_path, mk_microstructure_button, mo):
+    _form = mo.hstack(
+        [
+            mo.md("**Absolute Path to Microsturcture:**").style(white_space="pre"),
+            abs_path
+        ],
+        widths=[0,1]
+    )
+
+    _code = r"""
+    microstructurequery = QueryBuilder(
+    ).append(
+        SinglefileData, filters={
+            SinglefileData.fields.label: "microstructure"
+        }
+    ).all(
+        flat=True
+    )
+
+    if len(microstructurequery) == 0:
+        microstructurefile = SinglefileData(
+            Path('""" + (r"/path/to/microstructure.h5" if not abs_path.value else abs_path.value) + r"""'),
+            label="microstructure"
+        ).store()
+    elif len(microstructurequery) == 1:
+        microstructurefile = microstructurequery.pop()
+    else:
+        raise
+
+    inputs.add_nodes(microstructurefile)           # add the node to the "inputs" group
+    """
+
+    mo.md(rf"""
+    Next, we store the microstructure file in the database. Using a similar strategy as with the group definition, the `QueryBuilder` first searches for existing microstructures. If none are found, we define a new one in the form of a `SinglefileData` node. This built-in AiiDA datatype points to a file via a path. Finally, the microstructure node is included in our "inputs" group.
+
+    {_form}
+
+    {mk_microstructure_button}
+
+    ```py
+    {_code}
+    ```
+    """)
+    return
+
+
+@app.cell(hide_code=True)
 def microstructure(
     Path,
     QueryBuilder,
@@ -700,24 +784,65 @@ def microstructure(
 
 @app.cell(hide_code=True)
 def _(mo):
-    def_nodes_button = mo.ui.run_button()
+    def_nodes_button = mo.ui.run_button(label="`RUN`")
+    def_nodes_code_switch = mo.ui.switch(label="*show full code...*")
 
-    mo.md(
-        rf"""
-        Now, we will define the rest of our parameters. This is mostly straightforward, but we treat `material_properties` and `macroscale_loading` a little differently.
+    _code = r"""
+    # Microstructure Definition
+    Str("/sphere/32x32x32/ms", label="ms_datasetname"),
+    List([1.0, 1.0, 1.0], label="ms_L"),
 
-        - `material_properties`: A mock parameter space study is realised by randomly picking bulk and shear moduli from within a range.
-        - `macroscale_loading`: Three distinct loading conditions are explicitly written out.
+    ...
 
-        When it comes time to run our calculations, we will run the "product" of all these parameters.
-
-        {def_nodes_button}
-        """
+    # Material Model
+    Dict({"bulk_modulus": bulk, "shear_modulus": shear}, label="material_properties")
+     for bulk, shear in product(
+        [[uniform(50, 75), uniform(200, 250)] for _ in range(2)],
+        [[uniform(25, 50), uniform(150, 200)] for _ in range(2)]
     )
-    return (def_nodes_button,)
+
+    # Macroscale Loading Conditions
+    ArrayData({
+        "0": array([[1,0,0,0,0,0]]),
+        "1": array([[0,1,0,0,0,0]]),
+        "2": array([[0,0,1,0,0,0]]),
+        "3": array([[0,0,0,1,0,0]]),
+        "4": array([[0,0,0,0,1,0]]),
+        "5": array([[0,0,0,0,0,1]])
+    }, label="macroscale_loading"),
+    ArrayData({
+        "0": array([[1,0,0,0,0,0]]),
+
+    ...
+    """
+
+    mo.md(rf"""
+    Now, we will define the rest of our parameters. This is mostly straightforward, but we treat `material_properties` and `macroscale_loading` a little differently.
+
+    - `material_properties`: A mock parameter space study is realised by randomly picking bulk and shear moduli from within a range.
+    - `macroscale_loading`: Three distinct loading conditions are explicitly written out.
+
+    When it comes time to run our calculations, we will run the "product" of all these parameters.
+
+    {def_nodes_button}
+
+    ```py
+    {_code}
+    ```
+    {def_nodes_code_switch}
+    """)
+    return def_nodes_button, def_nodes_code_switch
 
 
-@app.cell
+@app.cell(hide_code=True)
+def _(def_nodes_button, def_nodes_code_switch, mo):
+    def gatekeep1():
+        mo.stop(not def_nodes_button.value and def_nodes_code_switch.value, output=mo.show_code())
+        mo.stop(not def_nodes_button.value)
+    return (gatekeep1,)
+
+
+@app.cell(hide_code=True)
 def node_definition(
     ArrayData,
     Dict,
@@ -726,12 +851,11 @@ def node_definition(
     List,
     Str,
     array,
-    def_nodes_button,
-    mo,
+    gatekeep1,
     product,
     uniform,
 ):
-    mo.stop(not def_nodes_button.value)  # run on click
+    gatekeep1() # Ignore this line.
 
     nodes = [
 
@@ -755,7 +879,6 @@ def node_definition(
     Str("absolute", label="error_parameters.type"),
     Float(1e-10, label="error_parameters.tolerance"),
     Int(100, label="n_it"),
-    Int(200, label="n_it"),
 
     # Macroscale Loading Conditions
     ArrayData({
@@ -784,32 +907,37 @@ def node_definition(
     }, label="macroscale_loading"),
 
     # Results Specification
-    List(["stress_average", "strain_average", "absolute_error", "phase_stress_average", "phase_strain_average", "microstructure", "displacement", "stress", "strain"], label="results")
+    List(["stress", "strain", "stress_average", "strain_average", 
+          "absolute_error", "phase_stress_average", "phase_strain_average", 
+          "microstructure", "displacement", ], label="results")
+
     ]
     return (nodes,)
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mk_nodes_button = mo.ui.run_button()
-
     mo.md(rf"""
-    While the cell above defined all the parameters, they still need to be stored in the database. Otherwise, they will be lost when the session ends. AiiDA automatically stores nodes when submitting them to a job, but it is good practice to handle this yourself. Moreover, you get to see your database grow step by step. After clicking the button below, try running `verdi node list` to see all the new additions we've made so far, and `verdi node show <id>` for more information about specific nodes.
+    While the cell above defined all the parameters, they still need to be stored in the database. Otherwise, they will be lost when the session ends. AiiDA automatically stores nodes when submitting them to a job, but it is good practice to handle this yourself. Moreover, you get to see your database grow step by step. After clicking the button below, try running `verdi node list` in your terminal to see all the new additions we've made so far, and `verdi node show <id>` for more information about specific nodes.
 
-    It is important to note that this time we did not make any checks through the QueryBuilder to ensure that indentical nodes don't already exist. This means that if you click the button below repeatedly, you *may* trigger duplicate nodes to be created. Since these are some the first nodes we're making, it is not so critical, but in practice you would want to first fetch existing nodes you want to reuse before creating the remainder of the nodes you wish to study.
+    It is important to note that this time we did not make any checks through the QueryBuilder to ensure that indentical nodes don't already exist. This means that if you click the button below repeatedly, you *may* cause duplicate nodes to be created. Since these are some the first nodes we're making, it is not so critical, but in practice you would want to first fetch existing nodes you want to reuse before creating the remainder of the nodes you wish to study.
 
-    {mk_nodes_button}
+    ```py
+    for node in nodes:             # iterate over the list of new node
+        node.store()               # store each one in the database
+        inputs.add_nodes(node)     # assign each one to the "inputs" group
+    ```
     """)
-    return (mk_nodes_button,)
+    return
 
 
-@app.cell
-def node_storage(inputs, mk_nodes_button, mo, nodes):
-    mo.stop(not mk_nodes_button.value)
+@app.cell(hide_code=True)
+def node_storage(def_nodes_button, inputs, mo, nodes):
+    mo.stop(not def_nodes_button.value)
 
-    for node in nodes:
-        node.store()
-        inputs.add_nodes(node)
+    for node in nodes:             # iterate over the list of new node
+        node.store()               # store each one in the database
+        inputs.add_nodes(node)     # assign each one to the "inputs" group
     return (node,)
 
 
@@ -915,35 +1043,68 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mk_params_button = mo.ui.run_button()
+    mk_params_button = mo.ui.run_button(label="`RUN`")
+    mk_params_code_switch = mo.ui.switch(label="*show full code...*")
 
-    mo.md(
-        rf"""
-        ### Executing Calculations
+    _code = r"""
+    some_params = [{
+        "microstructure": {
+            "datasetname": fetch("ms_datasetname", "/sphere/32x32x32/ms"),
+            ...
+    }]
 
-        Now that all the input parameters have been specified, it it time to run some calculations. We create lists of dictionaries for each set of paramaters we wish to vary. In our case, the `material_properties` need a list, as does the `macroscale_loading`. Everything else falls into a list of length one. The keys of the dictionaries here are important and are specified by the plugin. More information is available on the documentation, but efforts are being made to synchronise these with the FANS parameter specification.
+    material_properties_params = [
+        {"material_properties": mp.pop()}
+        for mp in QueryBuilder().append(
+            Dict, filters={
+                Dict.fields.label: "material_properties"
+            }
+        ).iterall()
+    ]
 
-        Below, the nodes are fetched using a helper function (see Appendix A) which essentially queries the database for a single node with a particular label and value. You could also use the nodes we created above instead, passing them forward as variables, but here we demonstrate how you might run calculations using a either new or old nodes at once.
+    macroscale_loading_params = [
+        ...
+    ]
+    """
 
-        Click the button bellow when you are sure that all the nodes above have been successfully created and stored. Try `verdi node list` to see them all.
+    mo.md(rf"""
+    ### Executing Calculations
 
-        {mk_params_button}
-        """
-    )
-    return (mk_params_button,)
+    Now that all the input parameters have been specified, it it time to run some calculations. We create lists of dictionaries for each set of paramaters we wish to vary. In our case, the `material_properties` need a list, as does the `macroscale_loading`. Everything else falls into a list of length one. The keys of the dictionaries here are important and are specified by the plugin. More information is available in the documentation, but efforts are being made to synchronise these with the FANS parameter specification.
+
+    Below, some nodes are fetched using a helper function (see [Appendix A](#appendix)) which essentially queries the database for a single node with a particular label and value. You could also use the nodes we created above instead, passing them forward as variables, but here we demonstrate how you might run calculations using a either new or old nodes at once.
+
+    Click the button bellow when you are sure that all the nodes above have been successfully created and stored. Try `verdi node list` to see them all.
+
+    {mk_params_button}
+
+    ```py
+    {_code}
+    ```
+
+    {mk_params_code_switch}
+    """)
+    return mk_params_button, mk_params_code_switch
 
 
-@app.cell
+@app.cell(hide_code=True)
+def _(mk_params_button, mk_params_code_switch, mo):
+    def gatekeep2():
+        mo.stop(not mk_params_button.value and mk_params_code_switch.value, output=mo.show_code())
+        mo.stop(not mk_params_button.value)
+    return (gatekeep2,)
+
+
+@app.cell(hide_code=True)
 def parameter_definition(
     ArrayData,
     Dict,
     QueryBuilder,
     SinglefileData,
     fetch,
-    mk_params_button,
-    mo,
+    gatekeep2,
 ):
-    mo.stop(not mk_params_button.value)
+    gatekeep2() # Ignore this line.
 
     some_params = [{
         "microstructure": {
@@ -963,14 +1124,9 @@ def parameter_definition(
             "type": fetch("error_parameters.type", "absolute"),
             "tolerance": fetch("error_parameters.tolerance", 1e-10)
         },
-        # "n_it": fetch("n_it", 100),
+        "n_it": fetch("n_it", 100),
         "results": fetch("results", ["stress_average", "strain_average", "absolute_error", "phase_stress_average", "phase_strain_average", "microstructure", "displacement", "stress", "strain"])
     }]
-
-    n_it_params = [
-        {"n_it": fetch("n_it", 100)},
-        {"n_it": fetch("n_it", 200)}
-    ]
 
     material_properties_params = [
         {"material_properties": mp.pop()}
@@ -989,29 +1145,37 @@ def parameter_definition(
             }
         ).iterall()
     ]
-    return (
-        macroscale_loading_params,
-        material_properties_params,
-        n_it_params,
-        some_params,
-    )
+    return macroscale_loading_params, material_properties_params, some_params
 
 
 @app.cell(hide_code=True)
-def _(mo):
-    calculate_button = mo.ui.run_button()
+def _(code_settings, mo):
+    calculate_button = mo.ui.run_button(label="`RUN`")
+
+    _code = r"""
+    FANSCalculation = CalculationFactory("fans")           # get the plugin's process class
+    code = {"code": load_code('""" + f"{"<code_label>')}" if code_settings.value is None else code_settings.value["label"] + "')}" : <27}" + """ # get the existing code node
+
+    for sp, nit, mpp, mlp in product(some_params, material_properties_params, macroscale_loading_params):
+        all_params = sp | nit | mpp | mlp                  # merge this permutation of params
+        run(FANSCalculation, all_params | code)            # finally run the job
+    """
 
     mo.md(rf"""
     Once these lists are defined, we use the `product` function to explore every permutation of their contents. Each permutation is coupled with the code node, defined earlier, and given to the `run` function with the plugin specific `FANSCalculation` process class.
 
-    Much like last time, we aren't checking if these calculations have already been run. so clicking the button below repeatedly will request duplicate calulations to be run and duplicate results will be generated.
+    Much like last time, we aren't checking if these calculations have already been run, so clicking the button below repeatedly will request duplicate calulations to be run and duplicate results will be generated.
 
     {calculate_button}
+
+    ```py
+    {_code}
+    ```
     """)
     return (calculate_button,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def calculations(
     CalculationFactory,
     calculate_button,
@@ -1020,40 +1184,93 @@ def calculations(
     macroscale_loading_params,
     material_properties_params,
     mo,
-    n_it_params,
     product,
     run,
     some_params,
 ):
     mo.stop(not calculate_button.value)
 
-    FANSCalculation = CalculationFactory("fans")
-    code = {"code": load_code(config_code.value["label"])}
+    FANSCalculation = CalculationFactory("fans")           # get the plugin's process class
+    code = {"code": load_code(config_code.value["label"])} # get the existing code node
 
-    for sp, nit, mpp, mlp in product(some_params, n_it_params, material_properties_params, macroscale_loading_params):
-        all_params = sp | nit | mpp | mlp
+    for sp, nit, mpp, mlp in product(some_params, material_properties_params, macroscale_loading_params):
+        all_params = sp | nit | mpp | mlp                  # merge this permutation of params
 
-        run(FANSCalculation, all_params | code)
+        run(FANSCalculation, all_params | code)            # finally run the job
     return FANSCalculation, all_params, code, mlp, mpp, nit, sp
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
-    query_button = mo.ui.run_button()
+    query_button = mo.ui.run_button(label="`RUN`")
 
-    mo.md(
-        rf"""
-        ## Analysing the Results
+    mo.md(rf"""
+    ## Analysing the Results
 
-        Now that our calculations are complete, we can make use of the QueryBuilder again to find and analyse the results.
+    Now that our calculations are complete, we can make use of the QueryBuilder again to find and analyse the results.
 
-        {query_button}
-        """
-    )
+    {query_button}
+    """)
     return (query_button,)
 
 
-@app.cell
+@app.cell(hide_code=True)
+def _(mo, query_button):
+    mo.stop(not query_button.value)  # run on click
+
+    # calc = QueryBuilder().append(CalcJobNode).first()
+    mat_props = [f"{k} = {v}" for k, v in {"bulk": 100, "shear": 200}.items()]
+    # mat_props = [f"{k}\t{v}" for k, v in calc.inputs.material_properties.items()]
+    mac_lod = [arr for arr in [[1,0],[0,1]]]
+    # mac_lod = [arr for arr in calc.inputs.macroscale_loading.get_iterarrays()]
+    outs = ["retrieved", "temporary"]
+    # outs = list(calc.outputs._get_keys())
+    stresses_strains = [{"Effective Stress": stress, "Effective Strain": strain} for stress, strain in zip([0.1, 0.2], [0.9, 0.8])]
+    # log = calc.outputs.retrieved.get_object_content("input.json.log").split("\n")
+    # stresses = []
+    # strains = []
+    # for ln in log:
+    #     if "Effective Stress" in ln:
+    #         stresses.append(ln.lstrip("# Effective Stress .. "))
+    #     if "Effective Strain" in ln:
+    #         strains.append(ln.lstrip("# Effective Strain .. "))
+    # stress_strains = [{"Effective Stress": stress, "Effective Strain": strain} for stress, strain in zip(stresses, strains)]
+    return mac_lod, mat_props, outs, stresses_strains
+
+
+@app.cell(hide_code=True)
+def _(mac_lod, mat_props, mo, outs, query_button, stresses_strains):
+    mo.stop(not query_button.value)  # run on click
+
+    mo.md(rf"""```py
+    # fetch a single calculation
+    calc = QueryBuilder().append(CalcJobNode).first()
+
+    # Material Properties
+    calc.inputs.material_properties.items():
+    ```
+    {mat_props}
+    ```py
+    # Macroscale Loading:
+    calc.inputs.macroscale_loading.get_iterarrays():
+    ```
+    {mac_lod}
+    ```py
+    # The Available Outputs: 
+    list(calc.outputs._get_keys())
+    ```
+    {outs}
+    ```py
+    # Effective Stress and Strain per Loading Condition:
+    log = calc.outputs.retrieved.get_object_content("input.json.log").split("\n")
+    ...
+    ```
+    {stresses_strains}
+    """)
+    return
+
+
+@app.cell(hide_code=True)
 def _(CalcJobNode, Int, QueryBuilder, mo, query_button):
     mo.stop(not query_button.value)  # run on click
 
@@ -1145,7 +1362,7 @@ def _(mo):
 
 
 @app.cell
-def _(Dict, Float, Int, List, QueryBuilder, Str):
+def _(Dict, Float, Int, List, QueryBuilder, Str, mo):
     def fetch(label : str, value):
         """Helper function to return a node whose label and value are known.
 
@@ -1180,6 +1397,8 @@ def _(Dict, Float, Int, List, QueryBuilder, Str):
             raise RuntimeError
 
         return bone.pop()
+
+    mo.show_code()
     return (fetch,)
 
 
