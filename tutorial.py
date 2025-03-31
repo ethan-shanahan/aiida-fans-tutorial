@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.11.31"
+__generated_with = "0.11.26"
 app = marimo.App(app_title="AiiDA-FANS Tutorial")
 
 
@@ -180,7 +180,7 @@ def _(mo, profile_settings):
     To create your new profile from this file run:
 
     ```
-    verdi profile setup core.sqlite_dos --config setup_profile.yaml
+    verdi profile setup core.sqlite_dos --config configure_profile.yaml
     ```
 
     Hopefully, that completed successfully. Using these commands, you should see your new profile listed (alone if this is your first profile) and a report on it also:
@@ -286,7 +286,7 @@ def _(computer_settings, mo):
     To specify your new computer from this file run:
 
     ```
-    verdi computer setup --config setup_computer.yaml
+    verdi computer setup --config configure_computer.yaml
     ```
 
     Then you must configure the computer with the following command:
@@ -404,7 +404,7 @@ def _(code_settings, mo):
     To define your new code from this file run:
 
     ```
-    verdi code create core.code.installed --config setup_code.yaml
+    verdi code create core.code.installed --config configure_code.yaml
     ```
 
     Hopefully, that completed successfully. Using these commands, you can show the details of your new code and verify that AiiDA can connect to it:
@@ -541,7 +541,7 @@ def _(mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    load_profile_button = mo.ui.run_button(label="`RUN`")
+    load_profile_button = mo.ui.run_button(label="RUN")
 
     mo.md(rf"""
     ### Creating Input Parameters
@@ -696,7 +696,7 @@ def group(Group, QueryBuilder, load_profile_button, mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mk_microstructure_button = mo.ui.run_button(label="`RUN`")
+    mk_microstructure_button = mo.ui.run_button(label="RUN")
 
     abs_path = mo.ui.text(placeholder="/path/to/microstructure.h5", full_width=True)
     return abs_path, mk_microstructure_button
@@ -782,9 +782,9 @@ def microstructure(
     return microstructurefile, microstructurequery
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(mo):
-    def_nodes_button = mo.ui.run_button(label="`RUN`")
+    def_nodes_button = mo.ui.run_button(label="RUN")
     def_nodes_code_switch = mo.ui.switch(label="*show full code...*")
 
     _code = r"""
@@ -794,24 +794,17 @@ def _(mo):
 
     ...
 
-    # Material Model
+    # Problem Type and Material Model: Moduli
     Dict({"bulk_modulus": bulk, "shear_modulus": shear}, label="material_properties")
      for bulk, shear in product(
         [[uniform(50, 75), uniform(200, 250)] for _ in range(2)],
         [[uniform(25, 50), uniform(150, 200)] for _ in range(2)]
     )
 
-    # Macroscale Loading Conditions
-    ArrayData({
-        "0": array([[1,0,0,0,0,0]]),
-        "1": array([[0,1,0,0,0,0]]),
-        "2": array([[0,0,1,0,0,0]]),
-        "3": array([[0,0,0,1,0,0]]),
-        "4": array([[0,0,0,0,1,0]]),
-        "5": array([[0,0,0,0,0,1]])
-    }, label="macroscale_loading"),
-    ArrayData({
-        "0": array([[1,0,0,0,0,0]]),
+    # Solver Settings: Number of Iterations
+    Int(100, label="n_it"),
+    Int(200, label="n_it"),
+    Int(300, label="n_it"),
 
     ...
     """
@@ -820,7 +813,7 @@ def _(mo):
     Now, we will define the rest of our parameters. This is mostly straightforward, but we treat `material_properties` and `macroscale_loading` a little differently.
 
     - `material_properties`: A mock parameter space study is realised by randomly picking bulk and shear moduli from within a range.
-    - `macroscale_loading`: Three distinct loading conditions are explicitly written out.
+    - `n_it`: Three different numbers of iterations are chosen.
 
     When it comes time to run our calculations, we will run the "product" of all these parameters.
 
@@ -842,7 +835,7 @@ def _(def_nodes_button, def_nodes_code_switch, mo):
     return (gatekeep1,)
 
 
-@app.cell(hide_code=True)
+@app.cell
 def node_definition(
     ArrayData,
     Dict,
@@ -879,6 +872,8 @@ def node_definition(
     Str("absolute", label="error_parameters.type"),
     Float(1e-10, label="error_parameters.tolerance"),
     Int(100, label="n_it"),
+    Int(200, label="n_it"),
+    Int(300, label="n_it"),
 
     # Macroscale Loading Conditions
     ArrayData({
@@ -889,27 +884,11 @@ def node_definition(
         "4": array([[0,0,0,0,1,0]]),
         "5": array([[0,0,0,0,0,1]])
     }, label="macroscale_loading"),
-    ArrayData({
-        "0": array([[1,0,0,0,0,0]]),
-        "1": array([[1,0,0,0,0,0]]),
-        "2": array([[1,0,0,0,0,0]]),
-        "3": array([[1,0,0,0,0,0]]),
-        "4": array([[1,0,0,0,0,0]]),
-        "5": array([[1,0,0,0,0,0]])
-    }, label="macroscale_loading"),
-    ArrayData({
-        "0": array([[0,0,0,0,0,1]]),
-        "1": array([[0,0,0,0,0,1]]),
-        "2": array([[0,0,0,0,0,1]]),
-        "3": array([[0,0,0,0,0,1]]),
-        "4": array([[0,0,0,0,0,1]]),
-        "5": array([[0,0,0,0,0,1]])
-    }, label="macroscale_loading"),
 
     # Results Specification
     List(["stress", "strain", "stress_average", "strain_average", 
           "absolute_error", "phase_stress_average", "phase_strain_average", 
-          "microstructure", "displacement", ], label="results")
+          "microstructure", "displacement"], label="results")
 
     ]
     return (nodes,)
@@ -942,108 +921,8 @@ def node_storage(def_nodes_button, inputs, mo, nodes):
 
 
 @app.cell(hide_code=True)
-def _():
-    # # Microstructure Definition
-    # microstructure_definition = [
-    #     {
-    #         "ms_datasetname": Str("/sphere/32x32x32/ms"),
-    #         "ms_L": List([1.0, 1.0, 1.0])
-    #     }
-    # ]
-
-    # # Problem Type and Material Model
-    # problem_type_and_material_model = []
-    # some = {
-    #     "problem_type": Str("mechanical"),
-    #     "matmodel": Str("LinearElasticIsotropic")
-    # }
-    # bulks = [[uniform(50, 75), uniform(200, 250)] for _ in range(2)]
-    # shears = [[uniform(25, 50), uniform(150, 200)] for _ in range(2)]
-    # for _bulk, _shear in product(bulks, shears):
-    #     material_properties = {"material_properties": Dict(
-    #             {
-    #                 "bulk_modulus": _bulk,
-    #                 "shear_modulus": _shear
-    #             }
-    #     )}
-    #     problem_type_and_material_model.append(some | material_properties)
-
-    # # Solver Settings
-    # solver_settings = [
-    #     {
-    #         "method": Str("cg"),
-    #         "error_parameters.measure": Str("Linfinity"),
-    #         "error_parameters.type": Str("absolute"),
-    #         "error_parameters.tolerance": Float(1e-10),
-    #         "n_it": Int(100)
-    #     }
-    # ]
-
-    # # Macroscale Loading Conditions
-    # macroscale_loading_conditions = [
-    #     {
-    #         "macroscale_loading": ArrayData({
-    #             "0": array([[1,0,0,0,0,0]]),
-    #             "1": array([[0,1,0,0,0,0]]),
-    #             "2": array([[0,0,1,0,0,0]]),
-    #             "3": array([[0,0,0,1,0,0]]),
-    #             "4": array([[0,0,0,0,1,0]]),
-    #             "5": array([[0,0,0,0,0,1]])
-    #         })
-    #     },
-    #     {
-    #         "macroscale_loading": ArrayData({
-    #             "0": array([[1,0,0,0,0,0]]),
-    #             "1": array([[1,0,0,0,0,0]]),
-    #             "2": array([[1,0,0,0,0,0]]),
-    #             "3": array([[1,0,0,0,0,0]]),
-    #             "4": array([[1,0,0,0,0,0]]),
-    #             "5": array([[1,0,0,0,0,0]])
-    #         })
-    #     },
-    #     {
-    #         "macroscale_loading": ArrayData({
-    #             "0": array([[0,0,0,0,0,1]]),
-    #             "1": array([[0,0,0,0,0,1]]),
-    #             "2": array([[0,0,0,0,0,1]]),
-    #             "3": array([[0,0,0,0,0,1]]),
-    #             "4": array([[0,0,0,0,0,1]]),
-    #             "5": array([[0,0,0,0,0,1]])
-    #         })
-    #     }
-    # ]
-
-    # # Results Specification
-    # results_specification = [
-    #     {
-    #         "results": List(["stress_average", "strain_average", "absolute_error", "phase_stress_average", "phase_strain_average", "microstructure", "displacement", "stress", "strain"])
-    #     }
-    # ]
-    return
-
-
-@app.cell(hide_code=True)
-def _():
-    # mo.stop(not mk_params_button.value)
-
-    # for ms, pt, ss, lc, rs in product(
-    #     microstructure_definition,
-    #     problem_type_and_material_model,
-    #     solver_settings,
-    #     macroscale_loading_conditions,
-    #     results_specification
-    # ):
-    #     nodes = ms | pt | ss | lc | rs
-    #     for label, node in nodes.items():
-    #         node.label = label
-    #         node.store()
-    #         inputs.add_nodes(node)
-    return
-
-
-@app.cell(hide_code=True)
 def _(mo):
-    mk_params_button = mo.ui.run_button(label="`RUN`")
+    mk_params_button = mo.ui.run_button(label="RUN")
     mk_params_code_switch = mo.ui.switch(label="*show full code...*")
 
     _code = r"""
@@ -1062,15 +941,17 @@ def _(mo):
         ).iterall()
     ]
 
-    macroscale_loading_params = [
-        ...
+    n_it_params = [
+        {"n_it": fetch("n_it", 100)},
+        {"n_it": fetch("n_it", 200)},
+        {"n_it": fetch("n_it", 300)}
     ]
     """
 
     mo.md(rf"""
     ### Executing Calculations
 
-    Now that all the input parameters have been specified, it it time to run some calculations. We create lists of dictionaries for each set of paramaters we wish to vary. In our case, the `material_properties` need a list, as does the `macroscale_loading`. Everything else falls into a list of length one. The keys of the dictionaries here are important and are specified by the plugin. More information is available in the documentation, but efforts are being made to synchronise these with the FANS parameter specification.
+    Now that all the input parameters have been specified, it it time to run some calculations. We create lists of dictionaries for each set of paramaters we wish to vary. In our case, `material_properties` need a list, as does `n_it`. Everything else falls into a list of length one. The keys of the dictionaries here are important and are specified by the plugin. More information is available in the documentation, but efforts are being made to synchronise these with the FANS parameter specification.
 
     Below, some nodes are fetched using a helper function (see [Appendix A](#appendix)) which essentially queries the database for a single node with a particular label and value. You could also use the nodes we created above instead, passing them forward as variables, but here we demonstrate how you might run calculations using a either new or old nodes at once.
 
@@ -1124,8 +1005,12 @@ def parameter_definition(
             "type": fetch("error_parameters.type", "absolute"),
             "tolerance": fetch("error_parameters.tolerance", 1e-10)
         },
-        "n_it": fetch("n_it", 100),
-        "results": fetch("results", ["stress_average", "strain_average", "absolute_error", "phase_stress_average", "phase_strain_average", "microstructure", "displacement", "stress", "strain"])
+        "macroscale_loading": QueryBuilder().append(
+            ArrayData, filters={
+                ArrayData.fields.label: "macroscale_loading"
+            }
+        ).first(flat=True),
+        "results": fetch("results", ["stress", "strain", "stress_average", "strain_average", "absolute_error", "phase_stress_average", "phase_strain_average", "microstructure", "displacement"])
     }]
 
     material_properties_params = [
@@ -1137,28 +1022,25 @@ def parameter_definition(
         ).iterall()
     ]
 
-    macroscale_loading_params = [
-        {"macroscale_loading": ml.pop()}
-        for ml in QueryBuilder().append(
-            ArrayData, filters={
-                ArrayData.fields.label: "macroscale_loading"
-            }
-        ).iterall()
+    n_it_params = [
+        {"n_it": fetch("n_it", 100)},
+        {"n_it": fetch("n_it", 200)},
+        {"n_it": fetch("n_it", 300)}
     ]
-    return macroscale_loading_params, material_properties_params, some_params
+    return material_properties_params, n_it_params, some_params
 
 
 @app.cell(hide_code=True)
 def _(code_settings, mo):
-    calculate_button = mo.ui.run_button(label="`RUN`")
+    calculate_button = mo.ui.run_button(label="RUN")
 
     _code = r"""
-    FANSCalculation = CalculationFactory("fans")           # get the plugin's process class
-    code = {"code": load_code('""" + f"{"<code_label>')}" if code_settings.value is None else code_settings.value["label"] + "')}" : <27}" + """ # get the existing code node
+    FANSCalculation = CalculationFactory("fans")      # get the plugin's process class
+    code = {"code": load_code('""" + f"{"<code_label>')}" if code_settings.value is None else code_settings.value["label"] + "')}" : <22}" + """ # get the existing code node
 
-    for sp, nit, mpp, mlp in product(some_params, material_properties_params, macroscale_loading_params):
-        all_params = sp | nit | mpp | mlp                  # merge this permutation of params
-        run(FANSCalculation, all_params | code)            # finally run the job
+    for sp, mpp, nit in product(some_params, material_properties_params, n_it_params):
+        all_params = sp | mpp | nit                   # merge this permutation of params
+        run(FANSCalculation, all_params | code)       # finally run the job
     """
 
     mo.md(rf"""
@@ -1179,30 +1061,33 @@ def _(code_settings, mo):
 def calculations(
     CalculationFactory,
     calculate_button,
-    config_code,
+    code_settings,
     load_code,
-    macroscale_loading_params,
     material_properties_params,
     mo,
+    n_it_params,
     product,
     run,
     some_params,
 ):
     mo.stop(not calculate_button.value)
 
-    FANSCalculation = CalculationFactory("fans")           # get the plugin's process class
-    code = {"code": load_code(config_code.value["label"])} # get the existing code node
+    FANSCalculation = CalculationFactory("fans")      # get the plugin's process class
+    try:                                              # get the existing code node
+        code = {"code": load_code(code_settings.value["label"])}
+    except:
+        mo.stop(True, output=mo.md("**Your code failed to load properly!**\n\nPlease submit the 'Define a Code' form in the [AiiDA Setup](aiida-setup) section.").style(text_align="center").callout(kind="danger"))
 
-    for sp, nit, mpp, mlp in product(some_params, material_properties_params, macroscale_loading_params):
-        all_params = sp | nit | mpp | mlp                  # merge this permutation of params
+    for sp, mpp, nit in product(some_params, material_properties_params, n_it_params):
+        all_params = sp | mpp | nit                   # merge this permutation of params
 
-        run(FANSCalculation, all_params | code)            # finally run the job
-    return FANSCalculation, all_params, code, mlp, mpp, nit, sp
+        run(FANSCalculation, all_params | code)       # finally run the job
+    return FANSCalculation, all_params, code, mpp, nit, sp
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    query_button = mo.ui.run_button(label="`RUN`")
+    query_button = mo.ui.run_button(label="RUN")
 
     mo.md(rf"""
     ## Analysing the Results
@@ -1221,7 +1106,7 @@ def _(mo, query_button):
     # calc = QueryBuilder().append(CalcJobNode).first()
     mat_props = [f"{k} = {v}" for k, v in {"bulk": 100, "shear": 200}.items()]
     # mat_props = [f"{k}\t{v}" for k, v in calc.inputs.material_properties.items()]
-    mac_lod = [arr for arr in [[1,0],[0,1]]]
+    n_its = [n for n in [100 , 200, 300]]
     # mac_lod = [arr for arr in calc.inputs.macroscale_loading.get_iterarrays()]
     outs = ["retrieved", "temporary"]
     # outs = list(calc.outputs._get_keys())
@@ -1235,26 +1120,26 @@ def _(mo, query_button):
     #     if "Effective Strain" in ln:
     #         strains.append(ln.lstrip("# Effective Strain .. "))
     # stress_strains = [{"Effective Stress": stress, "Effective Strain": strain} for stress, strain in zip(stresses, strains)]
-    return mac_lod, mat_props, outs, stresses_strains
+    return mat_props, n_its, outs, stresses_strains
 
 
 @app.cell(hide_code=True)
-def _(mac_lod, mat_props, mo, outs, query_button, stresses_strains):
+def _(mat_props, mo, n_its, outs, query_button, stresses_strains):
     mo.stop(not query_button.value)  # run on click
 
     mo.md(rf"""```py
-    # fetch a single calculation
+    # Fetch a single calculation...
     calc = QueryBuilder().append(CalcJobNode).first()
 
-    # Material Properties
+    # Material Properties:
     calc.inputs.material_properties.items():
     ```
     {mat_props}
     ```py
-    # Macroscale Loading:
-    calc.inputs.macroscale_loading.get_iterarrays():
+    # Number of Iterations:
+    calc.inputs.n_it.value():
     ```
-    {mac_lod}
+    {n_its}
     ```py
     # The Available Outputs: 
     list(calc.outputs._get_keys())
@@ -1279,9 +1164,6 @@ def _(CalcJobNode, Int, QueryBuilder, mo, query_button):
     calc = calcs[0]
 
     print("For a Single Calculation with the Following Inputs...")
-    print()
-    print("Number of Iterations:")
-    print(calc.inputs.n_it.value)
 
     print()
     print("Material Properties:")
@@ -1289,9 +1171,8 @@ def _(CalcJobNode, Int, QueryBuilder, mo, query_button):
         print(f"{k}\t{v}")
 
     print()
-    print("Macroscale Loading:")
-    for arr in calc.inputs.macroscale_loading.get_iterarrays():
-        print(arr)
+    print("Number of Iterations:")
+    print(calc.inputs.n_it.value)
 
 
     print()
@@ -1329,7 +1210,6 @@ def _(CalcJobNode, Int, QueryBuilder, mo, query_button):
     print("Calculation Jobs with n_it = 200:")
     print(*filtered_calcs, sep="\n")
     return (
-        arr,
         calc,
         calcs,
         filtered_calcs,
